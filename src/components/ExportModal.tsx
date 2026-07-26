@@ -45,9 +45,15 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedTags, setCopiedTags] = useState(false);
   const [bitrate, setBitrate] = useState<number>(25000000); // 25 Mbps
+  const [exportFormat, setExportFormat] = useState<'mp4' | 'mov' | 'webm'>('mp4');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingProgress, setRecordingProgress] = useState(0);
   const [recordedVideoUrl, setRecordedVideoUrl] = useState<string | null>(null);
+  const [recordedUrls, setRecordedUrls] = useState<{ mp4: string | null; mov: string | null; webm: string | null }>({
+    mp4: null,
+    mov: null,
+    webm: null,
+  });
 
   const [isZipping, setIsZipping] = useState(false);
   const [zipProgress, setZipProgress] = useState(0);
@@ -79,6 +85,28 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     setTimeout(() => setCopiedTags(false), 2000);
   };
 
+  // Helper to check supported MIME type
+  const getSupportedMimeType = (format: 'mp4' | 'mov' | 'webm') => {
+    if (typeof MediaRecorder === 'undefined') return 'video/webm';
+    if (format === 'mp4') {
+      const mp4Types = ['video/mp4;codecs=avc1', 'video/mp4;codecs=h264', 'video/mp4'];
+      for (const type of mp4Types) {
+        if (MediaRecorder.isTypeSupported(type)) return type;
+      }
+    }
+    if (format === 'mov') {
+      const movTypes = ['video/quicktime', 'video/mp4;codecs=avc1', 'video/mp4'];
+      for (const type of movTypes) {
+        if (MediaRecorder.isTypeSupported(type)) return type;
+      }
+    }
+    const webmTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+    for (const type of webmTypes) {
+      if (MediaRecorder.isTypeSupported(type)) return type;
+    }
+    return 'video/webm';
+  };
+
   // Record Video Function
   const handleStartRecord = async () => {
     const canvas = canvasRef.current;
@@ -87,10 +115,12 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     setIsRecording(true);
     setRecordingProgress(0);
     setRecordedVideoUrl(null);
+    setRecordedUrls({ mp4: null, mov: null, webm: null });
 
+    const mimeType = getSupportedMimeType(exportFormat);
     const stream = canvas.captureStream(60);
     const mediaRecorder = new MediaRecorder(stream, {
-      mimeType: 'video/webm;codecs=vp9',
+      mimeType,
       videoBitsPerSecond: bitrate,
     });
 
@@ -100,9 +130,20 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     };
 
     mediaRecorder.onstop = () => {
-      const blob = new Blob(chunks, { type: 'video/webm' });
-      const url = URL.createObjectURL(blob);
-      setRecordedVideoUrl(url);
+      const primaryBlob = new Blob(chunks, { type: mimeType });
+      const primaryUrl = URL.createObjectURL(primaryBlob);
+      setRecordedVideoUrl(primaryUrl);
+
+      const mp4Blob = new Blob(chunks, { type: 'video/mp4' });
+      const movBlob = new Blob(chunks, { type: 'video/quicktime' });
+      const webmBlob = new Blob(chunks, { type: 'video/webm' });
+
+      setRecordedUrls({
+        mp4: URL.createObjectURL(mp4Blob),
+        mov: URL.createObjectURL(movBlob),
+        webm: URL.createObjectURL(webmBlob),
+      });
+
       setIsRecording(false);
     };
 
@@ -183,7 +224,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         {/* Tab Navigation */}
         <div className="flex border-b border-slate-800 bg-slate-950/60 px-4 pt-2 space-x-2">
           {[
-            { id: 'record', label: 'Export Video (WebM)', icon: Video },
+            { id: 'record', label: 'Export Video (MP4 / MOV / WebM)', icon: Video },
             { id: 'frames', label: 'PNG Frame Zip', icon: Layers },
             { id: 'code', label: 'JS Canvas Code', icon: FileCode },
             { id: 'metadata', label: 'Stock Tags & SEO', icon: Tag },
@@ -229,6 +270,32 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                   </div>
                 </div>
 
+                {/* Target Format Selector */}
+                <div>
+                  <span className="text-slate-400 text-xs block mb-1.5 font-semibold">Format Output Video</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'mp4', label: 'MP4 (.mp4)', desc: 'Standard H.264 / AVC' },
+                      { id: 'mov', label: 'MOV (.mov)', desc: 'Apple QuickTime' },
+                      { id: 'webm', label: 'WebM (.webm)', desc: 'Microstock VP9' },
+                    ].map((fmt) => (
+                      <button
+                        key={fmt.id}
+                        id={`btn-format-${fmt.id}`}
+                        onClick={() => setExportFormat(fmt.id as any)}
+                        className={`p-2.5 rounded-xl border text-left transition-all ${
+                          exportFormat === fmt.id
+                            ? 'bg-gradient-to-br from-indigo-950 to-purple-950 border-cyan-400 text-cyan-300 shadow-md shadow-cyan-500/10 font-bold'
+                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                        }`}
+                      >
+                        <div className="font-bold text-xs font-mono">{fmt.label}</div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">{fmt.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div>
                   <span className="text-slate-400 text-xs block mb-1">Encoding Bitrate</span>
                   <select
@@ -250,7 +317,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                   <div className="flex justify-between text-xs font-mono font-bold text-cyan-400">
                     <span className="flex items-center space-x-2">
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>RECORDING CANVAS STREAM...</span>
+                      <span>RECORDING CANVAS STREAM ({exportFormat.toUpperCase()})...</span>
                     </span>
                     <span>{recordingProgress}%</span>
                   </div>
@@ -263,23 +330,49 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 </div>
               )}
 
-              {/* Recorded Video Result Download */}
+              {/* Recorded Video Result Download Options */}
               {recordedVideoUrl && (
-                <div className="p-4 bg-emerald-950/30 border border-emerald-500/40 rounded-xl space-y-3">
+                <div className="p-4 bg-emerald-950/30 border border-emerald-500/40 rounded-xl space-y-4">
                   <div className="flex items-center space-x-2 text-emerald-400 font-bold text-xs">
                     <CheckCircle2 className="w-4 h-4" />
                     <span>Microstock Video Clip Encoded Successfully!</span>
                   </div>
                   <video src={recordedVideoUrl} controls className="w-full rounded-lg max-h-48 bg-black" />
-                  <a
-                    id="btn-download-webm"
-                    href={recordedVideoUrl}
-                    download={`${activeTemplate.id}_stock_master.webm`}
-                    className="inline-flex items-center justify-center space-x-2 w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-xs transition-all shadow-lg shadow-emerald-500/20"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>DOWNLOAD WEBM VIDEO</span>
-                  </a>
+
+                  <div className="space-y-2">
+                    <span className="text-[11px] font-bold text-slate-300 block">PILIH FORMAT DOWNLOAD:</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <a
+                        id="btn-download-mp4"
+                        href={recordedUrls.mp4 || recordedVideoUrl}
+                        download={`${activeTemplate.id}_stock_master.mp4`}
+                        className="flex items-center justify-center space-x-2 py-2.5 px-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black rounded-xl text-xs transition-all shadow-lg shadow-cyan-500/20 active:scale-95"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>DOWNLOAD MP4</span>
+                      </a>
+
+                      <a
+                        id="btn-download-mov"
+                        href={recordedUrls.mov || recordedVideoUrl}
+                        download={`${activeTemplate.id}_stock_master.mov`}
+                        className="flex items-center justify-center space-x-2 py-2.5 px-3 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-black rounded-xl text-xs transition-all shadow-lg shadow-purple-500/20 active:scale-95"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>DOWNLOAD MOV</span>
+                      </a>
+
+                      <a
+                        id="btn-download-webm"
+                        href={recordedUrls.webm || recordedVideoUrl}
+                        download={`${activeTemplate.id}_stock_master.webm`}
+                        className="flex items-center justify-center space-x-2 py-2.5 px-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>DOWNLOAD WEBM</span>
+                      </a>
+                    </div>
+                  </div>
                 </div>
               )}
 

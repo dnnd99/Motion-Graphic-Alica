@@ -9,7 +9,8 @@ import {
   Sparkles, 
   Monitor, 
   RefreshCw,
-  Palette
+  Palette,
+  Code2
 } from 'lucide-react';
 import { AspectRatio, ResolutionOption } from '../types';
 import { COLOR_PALETTES } from '../data/palettes';
@@ -22,6 +23,7 @@ interface NavbarProps {
   activePaletteId: string;
   onSelectPalette: (paletteId: string) => void;
   onOpenExportModal: (tab: 'record' | 'frames' | 'code' | 'metadata') => void;
+  onOpenQuickPasteHub: () => void;
   onTakeSnapshot: () => void;
   isRecording: boolean;
   fps: number;
@@ -35,6 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   activePaletteId,
   onSelectPalette,
   onOpenExportModal,
+  onOpenQuickPasteHub,
   onTakeSnapshot,
   isRecording,
   fps
@@ -132,8 +135,17 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Export Action Buttons */}
+      {/* Export & Quick Paste Action Buttons */}
       <div className="flex items-center space-x-2">
+        <button
+          id="btn-open-quick-paste-hub"
+          onClick={onOpenQuickPasteHub}
+          className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 border border-purple-500/40 rounded-lg transition-all shadow-md shadow-purple-600/20 animate-pulse hover:animate-none"
+        >
+          <Code2 className="w-4 h-4 text-cyan-300" />
+          <span>QUICK PASTE HUB</span>
+        </button>
+
         <button
           id="btn-quick-snapshot"
           onClick={onTakeSnapshot}

@@ -5,9 +5,8 @@ import { MotionTemplate, MotionParams, AspectRatio, ResolutionOption, TimelineSt
 import { Navbar } from './components/Navbar';
 import { ViewportCanvas } from './components/ViewportCanvas';
 import { TimelineBar } from './components/TimelineBar';
-import { TemplateSelector } from './components/TemplateSelector';
-import { InspectorPanel } from './components/InspectorPanel';
 import { ExportModal } from './components/ExportModal';
+import { QuickPasteHubModal } from './components/QuickPasteHubModal';
 
 export default function App() {
   const [activeTemplate, setActiveTemplate] = useState<MotionTemplate>(TEMPLATES[0]);
@@ -38,9 +37,44 @@ export default function App() {
     tab: 'record',
   });
 
+  const [isQuickPasteHubOpen, setIsQuickPasteHubOpen] = useState<boolean>(false);
+  const [customUserCode, setCustomUserCode] = useState<string>('');
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animFrameIdRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(performance.now());
+
+  // Handle Quick Paste Custom Code Render
+  const handleRenderCustomCode = (code: string, compiledFn: any) => {
+    setCustomUserCode(code);
+
+    const customTemplate: MotionTemplate = {
+      id: `custom_paste_${Date.now()}`,
+      name: 'Custom Quick Paste Animation',
+      category: 'abstract',
+      description: 'Custom Canvas draw(ctx, time, width, height) code rendered via Quick Paste Hub.',
+      tags: ['custom', 'paste', 'canvas', 'user code', 'script'],
+      defaultDuration: 10,
+      recommendedFps: 60,
+      defaultParams: { ...TEMPLATES[0].defaultParams },
+      render: (ctx, width, height, time, duration, p) => {
+        if (compiledFn) {
+          try {
+            compiledFn(ctx, time, width, height, duration, p);
+          } catch (err) {
+            console.error('Custom code draw execution error:', err);
+          }
+        }
+      },
+    };
+
+    setActiveTemplate(customTemplate);
+    setTimeline((prev) => ({
+      ...prev,
+      currentTime: 0,
+      currentFrame: 0,
+    }));
+  };
 
   // Handle Template Selection
   const handleSelectTemplate = (template: MotionTemplate) => {
@@ -175,6 +209,7 @@ export default function App() {
         activePaletteId={activePaletteId}
         onSelectPalette={handleSelectPalette}
         onOpenExportModal={(tab) => setExportModal({ isOpen: true, tab })}
+        onOpenQuickPasteHub={() => setIsQuickPasteHubOpen(true)}
         onTakeSnapshot={handleTakeSnapshot}
         isRecording={false}
         fps={fps}
@@ -182,13 +217,6 @@ export default function App() {
 
       {/* Main Studio Workstation Body */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Drawer: Template Selector */}
-        <TemplateSelector
-          templates={TEMPLATES}
-          activeTemplateId={activeTemplate.id}
-          onSelectTemplate={handleSelectTemplate}
-        />
-
         {/* Center Stage: Canvas Viewport & Controls */}
         <div className="flex-1 flex flex-col h-full overflow-hidden relative">
           <ViewportCanvas
@@ -214,15 +242,6 @@ export default function App() {
             fps={fps}
           />
         </div>
-
-        {/* Right Drawer: Motion Inspector */}
-        <InspectorPanel
-          params={params}
-          onChangeParam={handleChangeParam}
-          onResetParams={handleResetParams}
-          onSelectPalette={handleSelectPalette}
-          activePaletteId={activePaletteId}
-        />
       </div>
 
       {/* Export Modal */}
@@ -237,6 +256,14 @@ export default function App() {
         aspectRatio={aspectRatio}
         resolution={resolution}
         canvasRef={canvasRef}
+      />
+
+      {/* Quick Paste Hub Modal (Geser & Atur) */}
+      <QuickPasteHubModal
+        isOpen={isQuickPasteHubOpen}
+        onClose={() => setIsQuickPasteHubOpen(false)}
+        onRenderCustomCode={handleRenderCustomCode}
+        currentCode={customUserCode}
       />
     </div>
   );
