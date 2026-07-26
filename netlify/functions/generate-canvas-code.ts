@@ -18,6 +18,34 @@ Aturan Penting:
 4. Selalu bersihkan background di awal (ctx.fillRect atau ctx.clearRect) dengan warna gelap bergaya sci-fi / motion graphics.
 5. Pastikan semua properti CSS font string (misal: "16px sans-serif") selalu dibungkus kuotasi string lengkap.`;
 
+// Ambil semua key yang tersedia: GEMINI_API_KEYS="key1,key2,key3" (koma, tanpa spasi)
+// juga support GEMINI_API_KEY tunggal biar tetap kompatibel dengan setup lama.
+function getApiKeys(): string[] {
+  const multi = process.env.GEMINI_API_KEYS;
+  if (multi && multi.trim()) {
+    return multi.split(",").map((k) => k.trim()).filter(Boolean);
+  }
+  const single = process.env.GEMINI_API_KEY;
+  return single ? [single.trim()] : [];
+}
+
+// Counter di module scope: bertahan selama instance function masih "warm",
+// jadi tiap request baru mulai dari key berikutnya (round-robin, bukan selalu key pertama).
+let rotationCursor = 0;
+
+function isRateLimitOrQuotaError(err: any): boolean {
+  const status = err?.status || err?.code || err?.response?.status;
+  const msg = String(err?.message || "").toLowerCase();
+  return (
+    status === 429 ||
+    status === 403 ||
+    msg.includes("quota") ||
+    msg.includes("rate limit") ||
+    msg.includes("resource_exhausted") ||
+    msg.includes("permission")
+  );
+}
+
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: JSON.stringify({ error: "Method not allowed" }) };
@@ -29,29 +57,57 @@ export const handler: Handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: "Prompt is required" }) };
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
+    const keys = getApiKeys();
+    if (keys.length === 0) {
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: "GEMINI_API_KEY environment variable is not configured." }),
+        body: JSON.stringify({ error: "GEMINI_API_KEY / GEMINI_API_KEYS environment variable is not configured." }),
       };
     }
 
-    const ai = new GoogleGenAI({
-      apiKey,
-      httpOptions: { headers: { "User-Agent": "aistudio-build" } },
-    });
+    let lastError: any = null;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: prompt,
-      config: { systemInstruction, temperature: 0.7 },
-    });
+    // Coba tiap key secara berurutan mulai dari posisi rotasi saat ini.
+    // Kalau satu key kena rate-limit/quota, otomatis lanjut ke key berikutnya.
+    for (let attempt = 0; attempt < keys.length; attempt++) {
+      const keyIndex = (rotationCursor + attempt) % keys.length;
+      const apiKey = keys[keyIndex];
 
-    let rawText = response.text || "";
-    rawText = rawText.replace(/```javascript/gi, "").replace(/```js/gi, "").replace(/```/g, "").trim();
+      try {
+        const ai = new GoogleGenAI({
+          apiKey,
+          httpOptions: { headers: { "User-Agent": "aistudio-build" } },
+        });
 
-    return { statusCode: 200, body: JSON.stringify({ code: rawText }) };
+        const response = await ai.models.generateContent({
+          model: "gemini-3.6-flash",
+          contents: prompt,
+          config: { systemInstruction, temperature: 0.7 },
+        });
+
+        let rawText = response.text || "";
+        rawText = rawText.replace(/```javascript/gi, "").replace(/```js/gi, "").replace(/```/g, "").trim();
+
+        // Sukses: geser cursor ke key berikutnya buat request selanjutnya (pemerataan beban).
+        rotationCursor = (keyIndex + 1) % keys.length;
+
+        return { statusCode: 200, body: JSON.stringify({ code: rawText }) };
+      } catch (err: any) {
+        lastError = err;
+        console.error(`Gemini API error on key #${keyIndex + 1}/${keys.length}:`, err?.message || err);
+
+        // Kalau bukan error kuota/rate-limit, nggak ada gunanya coba key lain — langsung lempar.
+        if (!isRateLimitOrQuotaError(err)) {
+          break;
+        }
+        // Kalau kuota/rate-limit: lanjut ke key berikutnya di iterasi selanjutnya.
+      }
+    }
+
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: lastError?.message || "Gagal membuat kode canvas dari AI" }),
+    };
   } catch (err: any) {
     console.error("Gemini API error:", err);
     return {
