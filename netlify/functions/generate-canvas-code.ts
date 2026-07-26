@@ -16,7 +16,11 @@ Aturan Penting:
    - height: tinggi canvas (px)
 3. Animasi harus berjalan lancar, dinamis, visual microstock berkualitas tinggi, bersinar/glowing, warna cerah, mempesona, dan looping mulus berdasarkan variabel 'time'.
 4. Selalu bersihkan background di awal (ctx.fillRect atau ctx.clearRect) dengan warna gelap bergaya sci-fi / motion graphics.
-5. Pastikan semua properti CSS font string (misal: "16px sans-serif") selalu dibungkus kuotasi string lengkap.`;
+5. Pastikan semua properti CSS font string (misal: "16px sans-serif") selalu dibungkus kuotasi string lengkap.
+6. WAJIB SEAMLESS LOOP: Definisikan sebuah variabel "duration" (misal const duration = 5) di awal fungsi, lalu HANYA gunakan "const loopT = time % duration;" untuk seluruh perhitungan animasi — jangan pernah pakai variabel "time" mentah untuk posisi/rotasi/opacity objek.
+7. Setiap gerakan periodik WAJIB pakai Math.sin/Math.cos dengan fase berbasis "(loopT / duration)" sehingga nilai animasi pada loopT=0 identik dengan nilai pada loopT mendekati duration (menyatu mulus, tidak ada lompatan/patahan saat looping).
+8. DILARANG animasi "sekali jalan lalu berhenti" (misal elemen tumbuh dari 0 lalu diam) kecuali progresnya direset otomatis mengikuti "loopT" sehingga di setiap siklus animasi mengulang persis dari awal.
+9. DILARANG memakai Math.random() untuk menentukan posisi/ukuran per-frame karena menyebabkan flicker/patahan; kalau perlu variasi acak, hitung sekali di luar animasi berbasis index tetap (bukan berbasis time), atau gunakan fungsi periodik (sin/cos) sebagai pengganti keacakan.`;
 
 // Ambil semua key yang tersedia: GEMINI_API_KEYS="key1,key2,key3" (koma, tanpa spasi)
 // juga support GEMINI_API_KEY tunggal biar tetap kompatibel dengan setup lama.
