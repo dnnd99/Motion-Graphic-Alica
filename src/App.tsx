@@ -17,6 +17,7 @@ export default function App() {
   const [resolution, setResolution] = useState<ResolutionOption>('1080p');
 
   const [fps, setFps] = useState<number>(60);
+  const [targetFps, setTargetFps] = useState<30 | 60>(60);
 
   const [timeline, setTimeline] = useState<TimelineState>({
     currentTime: 0,
@@ -29,14 +30,7 @@ export default function App() {
     speedMultiplier: 1,
   });
 
-  const [exportModal, setExportModal] = useState<{
-    isOpen: boolean;
-    tab: 'record' | 'frames' | 'code' | 'metadata';
-  }>({
-    isOpen: false,
-    tab: 'record',
-  });
-
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
   const [isQuickPasteHubOpen, setIsQuickPasteHubOpen] = useState<boolean>(false);
   const [customUserCode, setCustomUserCode] = useState<string>('');
 
@@ -119,17 +113,27 @@ export default function App() {
     setTimeline((prev) => ({ ...prev, isPlaying: !prev.isPlaying }));
   };
 
+  const handleChangeFps = (newFps: 30 | 60) => {
+    setTargetFps(newFps);
+    setTimeline((prev) => ({
+      ...prev,
+      fps: newFps,
+      totalFrames: prev.totalDuration * newFps,
+      currentFrame: Math.floor(prev.currentTime * newFps),
+    }));
+  };
+
   const handleSeek = (time: number) => {
     const clamped = Math.max(0, Math.min(timeline.totalDuration, time));
     setTimeline((prev) => ({
       ...prev,
       currentTime: clamped,
-      currentFrame: Math.floor(clamped * 60),
+      currentFrame: Math.floor(clamped * targetFps),
     }));
   };
 
   const handleStepFrame = (direction: -1 | 1) => {
-    const frameTime = 1 / 60;
+    const frameTime = 1 / targetFps;
     const nextTime = timeline.currentTime + direction * frameTime;
     handleSeek(nextTime < 0 ? timeline.totalDuration : nextTime % timeline.totalDuration);
   };
@@ -142,7 +146,7 @@ export default function App() {
     setTimeline((prev) => ({
       ...prev,
       totalDuration: dur,
-      totalFrames: dur * 60,
+      totalFrames: dur * targetFps,
       currentTime: Math.min(prev.currentTime, dur),
     }));
   };
@@ -164,7 +168,8 @@ export default function App() {
   // Animation Loop Driver
   const updateLoop = useCallback(() => {
     const now = performance.now();
-    const delta = (now - lastTimeRef.current) / 1000;
+    const rawDelta = (now - lastTimeRef.current) / 1000;
+    const delta = Math.min(rawDelta, 0.1);
     lastTimeRef.current = now;
 
     setTimeline((prev) => {
@@ -183,12 +188,12 @@ export default function App() {
       return {
         ...prev,
         currentTime: nextTime,
-        currentFrame: Math.floor(nextTime * 60),
+        currentFrame: Math.floor(nextTime * targetFps),
       };
     });
 
     animFrameIdRef.current = requestAnimationFrame(updateLoop);
-  }, []);
+  }, [targetFps]);
 
   useEffect(() => {
     lastTimeRef.current = performance.now();
@@ -208,7 +213,7 @@ export default function App() {
         setResolution={setResolution}
         activePaletteId={activePaletteId}
         onSelectPalette={handleSelectPalette}
-        onOpenExportModal={(tab) => setExportModal({ isOpen: true, tab })}
+        onOpenExportModal={() => setIsExportModalOpen(true)}
         onOpenQuickPasteHub={() => setIsQuickPasteHubOpen(true)}
         onTakeSnapshot={handleTakeSnapshot}
         isRecording={false}
@@ -240,25 +245,26 @@ export default function App() {
             onChangeDuration={handleChangeDuration}
             onChangeSpeed={handleChangeSpeed}
             fps={fps}
+            targetFps={targetFps}
+            onChangeFps={handleChangeFps}
           />
         </div>
       </div>
 
       {/* Export Modal */}
       <ExportModal
-        isOpen={exportModal.isOpen}
-        onClose={() => setExportModal({ ...exportModal, isOpen: false })}
-        activeTab={exportModal.tab}
-        setActiveTab={(tab) => setExportModal({ ...exportModal, tab })}
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
         activeTemplate={activeTemplate}
         params={params}
         duration={timeline.totalDuration}
         aspectRatio={aspectRatio}
         resolution={resolution}
         canvasRef={canvasRef}
+        targetFps={targetFps}
       />
 
-      {/* Quick Paste Hub Modal (Geser & Atur) */}
+      {/* Quick Paste Hub Modal */}
       <QuickPasteHubModal
         isOpen={isQuickPasteHubOpen}
         onClose={() => setIsQuickPasteHubOpen(false)}

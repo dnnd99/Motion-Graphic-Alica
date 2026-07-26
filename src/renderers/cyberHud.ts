@@ -38,7 +38,8 @@ export function renderCyberHud(
   ctx.stroke();
 
   // 2. Main Outer HUD Ring with Ticks
-  const rot1 = progress * Math.PI * 2 * params.rotationSpeed;
+  const rot1Cycles = Math.max(1, Math.round(params.rotationSpeed || 1));
+  const rot1 = progress * Math.PI * 2 * rot1Cycles;
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(rot1);

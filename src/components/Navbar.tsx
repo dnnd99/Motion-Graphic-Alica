@@ -1,14 +1,9 @@
 import React from 'react';
 import { 
   Video, 
-  Download, 
-  FileCode, 
-  Tag, 
   Camera, 
-  Layers, 
   Sparkles, 
   Monitor, 
-  RefreshCw,
   Palette,
   Code2
 } from 'lucide-react';
@@ -22,7 +17,7 @@ interface NavbarProps {
   setResolution: (res: ResolutionOption) => void;
   activePaletteId: string;
   onSelectPalette: (paletteId: string) => void;
-  onOpenExportModal: (tab: 'record' | 'frames' | 'code' | 'metadata') => void;
+  onOpenExportModal: () => void;
   onOpenQuickPasteHub: () => void;
   onTakeSnapshot: () => void;
   isRecording: boolean;
@@ -156,35 +151,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         </button>
 
         <button
-          id="btn-export-code"
-          onClick={() => onOpenExportModal('code')}
-          className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-all"
-        >
-          <FileCode className="w-3.5 h-3.5 text-cyan-400" />
-          <span>JS Code</span>
-        </button>
-
-        <button
-          id="btn-export-metadata"
-          onClick={() => onOpenExportModal('metadata')}
-          className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-all"
-        >
-          <Tag className="w-3.5 h-3.5 text-indigo-400" />
-          <span>Stock Tags</span>
-        </button>
-
-        <button
-          id="btn-export-frames"
-          onClick={() => onOpenExportModal('frames')}
-          className="hidden lg:flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-all"
-        >
-          <Layers className="w-3.5 h-3.5 text-amber-400" />
-          <span>PNG Zip</span>
-        </button>
-
-        <button
           id="btn-record-video"
-          onClick={() => onOpenExportModal('record')}
+          onClick={onOpenExportModal}
           className={`flex items-center space-x-2 px-4 py-1.5 text-xs font-bold rounded-lg transition-all shadow-lg ${
             isRecording
               ? 'bg-rose-600 text-white animate-pulse shadow-rose-600/30'

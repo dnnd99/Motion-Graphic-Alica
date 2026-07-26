@@ -30,8 +30,9 @@ export function renderFluidMesh(
     const angleOffset = (b / blobCount) * Math.PI * 2;
     // Orbit motion seamlessly aligned
     const orbitR = 80 * params.zoomScale;
-    const bx = cx + cosLoop(progress * params.speed, 1, angleOffset) * orbitR;
-    const by = cy + sinLoop(progress * params.speed, 1, angleOffset) * orbitR;
+    const speedMultiplier = Math.max(1, Math.round(params.speed));
+    const bx = cx + cosLoop(progress, speedMultiplier, angleOffset) * orbitR;
+    const by = cy + sinLoop(progress, speedMultiplier, angleOffset) * orbitR;
 
     ctx.save();
     ctx.translate(bx, by);

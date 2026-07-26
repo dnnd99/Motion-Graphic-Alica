@@ -39,22 +39,24 @@ export function renderQuantumVortex(
 
   // Spiraling Vortex Particles with Speed Motion Trails
   ctx.lineWidth = params.lineThickness;
+  const speedCycles = Math.max(1, Math.round(params.speed));
 
   for (let i = 0; i < pCount; i++) {
     const seed = i * 1337;
     // Radial spiral inward / outward seamless loop
-    const normP = (progress * params.speed + (seed % 100) / 100) % 1;
+    const normP = (progress * speedCycles + (seed % 100) / 100) % 1;
 
     const r = normP * maxRadius;
-    const spiralAngle = normP * Math.PI * 12 * (params.rotationSpeed || 1) + (seed % 360) * (Math.PI / 180);
+    const rotSpeedInt = Math.max(1, Math.round(params.rotationSpeed || 1));
+    const spiralAngle = normP * Math.PI * 2 * 6 * rotSpeedInt + (seed % 360) * (Math.PI / 180);
 
     const x = cx + Math.cos(spiralAngle) * r;
     const y = cy + Math.sin(spiralAngle) * r;
 
     // Previous point for motion trail
-    const prevNormP = Math.max(0, normP - 0.02 * params.speed);
+    const prevNormP = Math.max(0, normP - 0.02);
     const prevR = prevNormP * maxRadius;
-    const prevAngle = prevNormP * Math.PI * 12 * (params.rotationSpeed || 1) + (seed % 360) * (Math.PI / 180);
+    const prevAngle = prevNormP * Math.PI * 2 * 6 * rotSpeedInt + (seed % 360) * (Math.PI / 180);
     const prevX = cx + Math.cos(prevAngle) * prevR;
     const prevY = cy + Math.sin(prevAngle) * prevR;
 

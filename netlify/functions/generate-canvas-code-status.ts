@@ -11,7 +11,6 @@ export const handler: Handler = async (event) => {
   const job = await store.get(jobId, { type: "json" });
 
   if (!job) {
-    // Not created yet (background function invocation still spinning up) — client should keep polling.
     return { statusCode: 200, body: JSON.stringify({ status: "pending" }) };
   }
 

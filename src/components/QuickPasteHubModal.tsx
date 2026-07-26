@@ -34,14 +34,12 @@ const PRESET_PROMPTS = [
 ];
 
 const DEFAULT_DRAW_CODE = `function draw(ctx, time, width, height) {
-  const t = time;
   const duration = 5;
-  const sceneCount = 1;
-  const loopT = t % duration;
-  const sceneDuration = duration / sceneCount;
-  const currentScene = Math.floor(loopT / sceneDuration);
+  // Seamless 100% soft loop normalized progress (0 to 1)
+  const normT = (time % duration) / duration;
+  const loopAngle = normT * Math.PI * 2; // 0 to 2π
 
-  // Clear & Background
+  // Clear & Sci-Fi Background
   ctx.fillStyle = '#0a0d1a';
   ctx.fillRect(0, 0, width, height);
 
@@ -49,10 +47,10 @@ const DEFAULT_DRAW_CODE = `function draw(ctx, time, width, height) {
   const cy = height / 2;
   const radius = Math.min(width, height) * 0.22;
 
-  // Rotating outer ring
+  // Rotating outer ring (Seamless 2π phase)
   ctx.save();
   ctx.translate(cx, cy);
-  ctx.rotate(t * 0.5);
+  ctx.rotate(loopAngle);
 
   ctx.strokeStyle = '#00f0ff';
   ctx.lineWidth = 4;
@@ -61,37 +59,37 @@ const DEFAULT_DRAW_CODE = `function draw(ctx, time, width, height) {
 
   ctx.beginPath();
   for (let i = 0; i < 6; i++) {
-    const angle = (i * Math.PI) / 3;
-    const r = radius * (1 + 0.15 * Math.sin(t * 2 + i));
-    const x = r * Math.cos(angle);
-    const y = r * Math.sin(angle);
+    const a = (i * Math.PI) / 3;
+    const r = radius * (1 + 0.15 * Math.sin(loopAngle * 2 + (i * Math.PI) / 3));
+    const x = r * Math.cos(a);
+    const y = r * Math.sin(a);
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   }
   ctx.closePath();
   ctx.stroke();
 
-  // Inner pulsing core
-  ctx.rotate(-t * 1.2);
+  // Inner pulsing core (Integer harmonic phase)
+  ctx.rotate(-loopAngle * 2);
   ctx.strokeStyle = '#8000ff';
   ctx.lineWidth = 3;
   ctx.shadowColor = '#d000ff';
   ctx.shadowBlur = 25;
 
   ctx.beginPath();
-  ctx.arc(0, 0, radius * 0.55 * (1 + 0.1 * Math.sin(t * 4)), 0, Math.PI * 2);
+  ctx.arc(0, 0, Math.max(10, radius * 0.55 * (1 + 0.12 * Math.sin(loopAngle * 3))), 0, Math.PI * 2);
   ctx.stroke();
 
   ctx.restore();
 
-  // Floating Particles
+  // Orbital Energy Particles
   ctx.fillStyle = '#00f0ff';
   for (let i = 0; i < 30; i++) {
-    const pAngle = (i / 30) * Math.PI * 2 + t * 0.3;
-    const pDist = radius * 1.4 + Math.sin(t * 3 + i) * 30;
+    const pAngle = (i / 30) * Math.PI * 2 + loopAngle;
+    const pDist = radius * 1.4 + Math.sin(loopAngle * 2 + (i * Math.PI) / 5) * 25;
     const px = cx + Math.cos(pAngle) * pDist;
     const py = cy + Math.sin(pAngle) * pDist;
-    const size = 2 + Math.sin(t * 5 + i) * 1.5;
+    const size = 2.5 + Math.sin(loopAngle * 4 + i) * 1.2;
 
     ctx.beginPath();
     ctx.arc(px, py, Math.max(1, size), 0, Math.PI * 2);
@@ -110,6 +108,7 @@ export const QuickPasteHubModal: React.FC<QuickPasteHubModalProps> = ({
   const [aiPrompt, setAiPrompt] = useState<string>('');
   const [isGeneratingAi, setIsGeneratingAi] = useState<boolean>(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [aiElapsedSec, setAiElapsedSec] = useState<number>(0);
 
   const [lintResult, setLintResult] = useState<LintResult>({
     issues: [],
@@ -182,6 +181,12 @@ export const QuickPasteHubModal: React.FC<QuickPasteHubModalProps> = ({
     if (!aiPrompt.trim()) return;
     setIsGeneratingAi(true);
     setAiError(null);
+    setAiElapsedSec(0);
+
+    const tickStart = Date.now();
+    const ticker = setInterval(() => {
+      setAiElapsedSec(Math.floor((Date.now() - tickStart) / 1000));
+    }, 1000);
 
     const jobId = (crypto as any).randomUUID
       ? crypto.randomUUID()
@@ -229,6 +234,7 @@ export const QuickPasteHubModal: React.FC<QuickPasteHubModalProps> = ({
     } catch (err: any) {
       setAiError(err.message || 'Terjadi kesalahan server saat generate AI');
     } finally {
+      clearInterval(ticker);
       setIsGeneratingAi(false);
     }
   };
@@ -351,7 +357,7 @@ export const QuickPasteHubModal: React.FC<QuickPasteHubModalProps> = ({
                   {isGeneratingAi ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin text-cyan-300" />
-                      <span>MEMBUAT KODE CANVAS DENGAN GEMINI AI...</span>
+                      <span>MEMBUAT KODE CANVAS DENGAN GEMINI AI... ({aiElapsedSec}s)</span>
                     </>
                   ) : (
                     <>

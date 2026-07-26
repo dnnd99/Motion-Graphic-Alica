@@ -26,6 +26,8 @@ export function renderAbstractWave(
   ctx.shadowColor = params.glowColor;
   ctx.shadowBlur = (params.glowIntensity / 100) * 20;
 
+  const speedCycles = Math.max(1, Math.round(params.speed));
+
   for (let r = 0; r < ribbonCount; r++) {
     const rProgress = (r / ribbonCount);
     const yCenter = height * (0.2 + rProgress * 0.6);
@@ -46,8 +48,8 @@ export function renderAbstractWave(
 
       // 3-tier sine wave equation for undulating ribbon
       const freq = (params.waveFrequency || 1.5) * Math.PI * 2;
-      const wave1 = sinLoop(progress * params.speed + normX * freq / Math.PI, 1, r * 0.4) * 50 * params.zoomScale;
-      const wave2 = cosLoop(progress * params.speed * 1.5 + normX * freq * 0.5 / Math.PI, 1, r) * 30 * params.zoomScale;
+      const wave1 = sinLoop(progress, speedCycles, normX * freq / Math.PI + r * 0.4) * 50 * params.zoomScale;
+      const wave2 = cosLoop(progress, speedCycles * 2, normX * freq * 0.5 / Math.PI + r) * 30 * params.zoomScale;
 
       const y = yCenter + wave1 + wave2;
 
@@ -62,13 +64,13 @@ export function renderAbstractWave(
   ctx.fillStyle = params.accentColor;
   for (let p = 0; p < particleCount; p++) {
     const seed = p * 42;
-    const pProg = (progress * params.speed + (seed % 100) / 100) % 1;
+    const pProg = (progress * speedCycles + (seed % 100) / 100) % 1;
     const px = pProg * width;
     const ribbonIndex = p % ribbonCount;
     const yCenter = height * (0.2 + (ribbonIndex / ribbonCount) * 0.6);
 
     const freq = (params.waveFrequency || 1.5) * Math.PI * 2;
-    const wave1 = sinLoop(progress * params.speed + (pProg) * freq / Math.PI, 1, ribbonIndex * 0.4) * 50 * params.zoomScale;
+    const wave1 = sinLoop(progress, speedCycles, (pProg) * freq / Math.PI + ribbonIndex * 0.4) * 50 * params.zoomScale;
     const py = yCenter + wave1;
 
     ctx.fillRect(px, py, 3, 3);

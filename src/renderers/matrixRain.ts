@@ -31,7 +31,8 @@ export function renderMatrixRain(
   for (let c = 0; c < columns; c++) {
     const columnSeed = c * 713;
     const colSpeed = 1 + (columnSeed % 5) * 0.25;
-    const colProgress = (progress * colSpeed * params.speed + (columnSeed % 100) / 100) % 1;
+    const colCycles = Math.max(1, Math.round(colSpeed * params.speed * 2));
+    const colProgress = (progress * colCycles + (columnSeed % 100) / 100) % 1;
 
     const streamLength = 14 + (columnSeed % 10);
     const headY = colProgress * (height + streamLength * fontSize);
@@ -41,7 +42,7 @@ export function renderMatrixRain(
       if (charY < -fontSize || charY > height + fontSize) continue;
 
       const charX = c * fontSize * 1.2 + 10;
-      const charIndex = Math.floor((c * 17 + i * 3 + Math.floor(time * 10)) % GLYPHS.length);
+      const charIndex = Math.floor((c * 17 + i * 3 + Math.floor(progress * 100)) % GLYPHS.length);
       const char = GLYPHS[charIndex];
 
       const isHead = i === 0;

@@ -73,7 +73,8 @@ export function renderSynthwaveGrid(
 
   // Moving Horizontal Grid Lines
   const hLineCount = 18;
-  const speedProgress = (progress * params.speed * 2) % 1;
+  const speedCycles = Math.max(1, Math.round(params.speed * 2));
+  const speedProgress = (progress * speedCycles) % 1;
 
   ctx.beginPath();
   for (let i = 0; i < hLineCount; i++) {

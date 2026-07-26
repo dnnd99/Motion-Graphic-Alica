@@ -20,6 +20,8 @@ interface TimelineBarProps {
   onChangeDuration: (duration: number) => void;
   onChangeSpeed: (speed: number) => void;
   fps: number;
+  targetFps: number;
+  onChangeFps: (fps: 30 | 60) => void;
 }
 
 export const TimelineBar: React.FC<TimelineBarProps> = ({
@@ -31,6 +33,8 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
   onChangeDuration,
   onChangeSpeed,
   fps,
+  targetFps,
+  onChangeFps,
 }) => {
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -133,8 +137,27 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
           ))}
         </div>
 
-        {/* Right Speed Multiplier & Telemetry */}
+        {/* Right Speed Multiplier, FPS Selector & Telemetry */}
         <div className="flex items-center space-x-3">
+          {/* FPS Selector (30 FPS vs 60 FPS) */}
+          <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded border border-slate-800">
+            <span className="text-[10px] text-slate-400 font-mono px-1 font-bold">FPS:</span>
+            {[30, 60].map((f) => (
+              <button
+                key={f}
+                id={`btn-timeline-fps-${f}`}
+                onClick={() => onChangeFps(f as 30 | 60)}
+                className={`px-1.5 py-0.5 rounded text-[11px] font-mono transition-all font-bold ${
+                  targetFps === f
+                    ? 'bg-emerald-500 text-slate-950 font-extrabold shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+
           <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded border border-slate-800">
             <Gauge className="w-3.5 h-3.5 text-slate-400 ml-1" />
             {[0.5, 1, 1.5, 2].map((spd) => (
