@@ -7,6 +7,16 @@
   node_bundler = "esbuild"
 
 [[redirects]]
+  from = "/api/generate-canvas-code-background"
+  to = "/.netlify/functions/generate-canvas-code-background"
+  status = 200
+
+[[redirects]]
+  from = "/api/generate-canvas-code-status"
+  to = "/.netlify/functions/generate-canvas-code-status"
+  status = 200
+
+[[redirects]]
   from = "/api/generate-canvas-code"
   to = "/.netlify/functions/generate-canvas-code"
   status = 200

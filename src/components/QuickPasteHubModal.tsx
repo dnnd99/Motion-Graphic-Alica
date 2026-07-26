@@ -175,29 +175,54 @@ export const QuickPasteHubModal: React.FC<QuickPasteHubModalProps> = ({
 
   if (!isOpen) return null;
 
-  // AI Code Generation Handler
+  // AI Code Generation Handler — starts a background job then polls for the
+  // result. Avoids Netlify's 10s synchronous function timeout, since Gemini
+  // can take longer than that to write a full animation.
   const handleGenerateAiCode = async () => {
     if (!aiPrompt.trim()) return;
     setIsGeneratingAi(true);
     setAiError(null);
 
+    const jobId = (crypto as any).randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
     try {
-      const response = await fetch('/api/generate-canvas-code', {
+      const startResponse = await fetch('/api/generate-canvas-code-background', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt: aiPrompt }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: aiPrompt, jobId }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Gagal membuat kode dari AI');
+      if (!startResponse.ok && startResponse.status !== 202) {
+        throw new Error('Gagal memulai proses generate AI');
       }
 
-      if (data.code && data.code.trim()) {
-        setCode(data.code.trim());
+      const maxAttempts = 45; // ~90s total (2s interval)
+      let result: any = null;
+
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+
+        const statusResponse = await fetch(`/api/generate-canvas-code-status?jobId=${jobId}`);
+        const statusData = await statusResponse.json();
+
+        if (statusData.status === 'done') {
+          result = statusData;
+          break;
+        }
+        if (statusData.status === 'error') {
+          throw new Error(statusData.error || 'Gagal membuat kode dari AI');
+        }
+        // status 'pending' -> keep polling
+      }
+
+      if (!result) {
+        throw new Error('Proses generate AI terlalu lama, coba lagi dengan prompt yang lebih sederhana');
+      }
+
+      if (result.code && result.code.trim()) {
+        setCode(result.code.trim());
       } else {
         throw new Error('Tidak ada respon kode yang dihasilkan AI');
       }
