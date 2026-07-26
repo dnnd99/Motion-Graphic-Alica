@@ -1,0 +1,6 @@
+{
+  "name": "Motion Graphics Microstock Studio",
+  "description": "Professional HTML5 Canvas Motion Graphics Engine & Microstock Video Generator with live rendering, customizable parameters, timeline controls, and WebM/PNG frame sequence export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
