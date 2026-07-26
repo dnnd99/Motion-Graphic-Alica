@@ -86,7 +86,7 @@ export const handler: Handler = async (event) => {
         const response = await ai.models.generateContent({
           model: "gemini-3.6-flash",
           contents: prompt,
-          config: { systemInstruction, temperature: 0.7 },
+          config: { systemInstruction, temperature: 0.7, thinkingConfig: { thinkingLevel: "LOW" } },
         });
 
         let rawText = response.text || "";

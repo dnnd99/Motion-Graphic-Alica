@@ -198,11 +198,11 @@ export const QuickPasteHubModal: React.FC<QuickPasteHubModalProps> = ({
         throw new Error('Gagal memulai proses generate AI');
       }
 
-      const maxAttempts = 45; // ~90s total (2s interval)
+      const maxAttempts = 60; // ~90s total (1.5s interval)
       let result: any = null;
 
       for (let i = 0; i < maxAttempts; i++) {
-        await new Promise((r) => setTimeout(r, 2000));
+        await new Promise((r) => setTimeout(r, 1500));
 
         const statusResponse = await fetch(`/api/generate-canvas-code-status?jobId=${jobId}`);
         const statusData = await statusResponse.json();
